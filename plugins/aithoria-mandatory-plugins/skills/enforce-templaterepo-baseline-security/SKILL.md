@@ -1,15 +1,15 @@
 ---
-name: template-baseline
+name: enforce-templaterepo-baseline-security
 description: >-
   Checks the current git repository against the secret and ignore baseline from
   aithoria-internal/templaterepo. Creates missing .gitignore, .cursorignore and
   .dockerignore files, proposes additions to existing ones for confirmation,
-  and offers an optional comparison of Cursor rules. Never changes a customer
-  project on its own. Use once per day in a repository, and again the same day
+  and mentions a template rule only when that rule would help this project.
+  Never changes a customer project on its own. Use once per day in a repository, and again the same day
   when a stack path appears that was absent at the last check, such as infra/,
   bootstrap/, prisma/, or tests/.
 metadata:
-  version: "1"
+  version: "2"
 ---
 
 # Template baseline
@@ -82,13 +82,13 @@ A newly ignored file that is already tracked stays tracked. Report it, including
 
 Never add, replace, merge into, or delete a Cursor rule on your own. Projects may have their own conventions. Leave a legacy `.cursorrules` file untouched.
 
-Ask the user once whether they want a comparison of the project's rules with the template rules in `.cursor/rules`. Skip the question in a customer project unless the user brings it up. If the user declines, record that and move on.
+Do not ask whether the user wants a comparison of the template rules. Read each template rule in `.cursor/rules` first, at least its description, and decide whether it would help this repository. Use the table for the rules listed there. A rule the template adds later follows the same test: `alwaysApply` and no stack names can fit any repository; otherwise the paths in its description or `globs` must already exist. Read the rule body only when the description is not enough to decide.
 
-If the user wants the comparison, list:
+Offer a comparison only for rules that are missing in this repository and would help it. Name each one with why it fits. Skip every rule that does not fit. Do not mention Terraform rules when `infra/` and `bootstrap/` are absent, and do not mention the other stack rules when their path is absent. If no missing rule would help, say nothing about rules and continue the task. Do not inventory rules that are already present, and do not list rules that only the project has, unless the user asks.
 
-- **Template only:** rules the project does not have, with whether they fit this repository (see table).
-- **Same name, different content:** a short summary of the differences, not a full diff unless asked.
-- **Project only:** rules the template does not have, for context.
+In a customer project, do not offer this unless the user brings rules up. If the user declines, record that and do not ask again the same day.
+
+The user decides what to take over. Apply only the rules they name, as new files. Change an existing rule file only when the user explicitly asks for that specific change.
 
 | Template rule | Fits this repository when |
 | --- | --- |
@@ -101,13 +101,9 @@ If the user wants the comparison, list:
 | `terraform.mdc` | `infra/` or `bootstrap/` exists |
 | `testing.mdc` | `tests/` exists |
 
-A rule the template adds later follows the same test: `alwaysApply` and no stack names fits every repository; otherwise the paths in its `globs` must already exist.
-
-The user decides what to take over. Apply only the rules they name, as new files. Change an existing rule file only when the user explicitly asks for that specific change.
-
 ## Skills
 
-List `.agents/skills`, `.claude/skills`, and `.codex/skills` in the template. The template currently has none. If it gains one, treat it like a rule: mention it, and copy it only when the user asks and the project does not already have the same skill name in any of those three directories or in `.cursor/skills`. Write it once, into the same directory the template used. Do not overwrite an existing skill.
+List `.agents/skills`, `.claude/skills`, and `.codex/skills` in the template. The template currently has none. If it gains one, treat it like a rule: read it, and mention it only when it would help this project and the project does not already have the same skill name in any of those three directories or in `.cursor/skills`. Copy it only when the user asks. Write it once, into the same directory the template used. Do not overwrite an existing skill.
 
 ## After
 
@@ -117,5 +113,6 @@ Say in one or two sentences what changed: created files, confirmed additions, an
 
 History only; the sections above define the behavior.
 
+- **v2** (feedback: Erik). The always-apply rule only points at this skill. It no longer repeats create, append, or copy steps. Template rules are read before any question. A comparison is offered only for missing rules that would help this repository. Rules that do not fit are not mentioned.
 - **v1** (feedback: Denis). Added project levels: customer projects are not changed, and a comparison runs only on request. Missing ignore files are created and reported. Additions to existing ignore files are shown as a comparison list and applied only after confirmation. Cursor rules and template skills are no longer added automatically; the user is offered a comparison and decides. Declined decisions are stored in the stamp. Reason: template rules can conflict with a project's own conventions, and customer repositories must not change without consent.
 - **v0**. Initial version. Created missing ignore files and appended missing patterns without asking. Added template Cursor rules and skills automatically when the filename was absent and the stack path existed.
