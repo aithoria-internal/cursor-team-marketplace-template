@@ -1,0 +1,15 @@
+---
+description: React component conventions
+globs: src/components/**
+alwaysApply: false
+---
+
+# Component Conventions
+
+- Style with aithoria design tokens (`var(--*)` CSS variables) and Tailwind utilities
+- Server components by default; "use client" only for state/effects/browser APIs
+- Props interface: `{ComponentName}Props`
+- Use `cn()` utility from src/lib/utils.ts for className merging
+- Ensure accessibility: proper ARIA attributes, keyboard navigation
+- Named exports only, no default exports
+- Colocate component-specific types in the same file

@@ -1,0 +1,16 @@
+---
+description: API route conventions
+globs: src/app/api/**
+alwaysApply: false
+---
+
+# API Route Conventions
+
+- Validate request body/params with Zod before processing
+- Check authentication: `const session = await auth()`
+- Return consistent JSON shape: `{ data } | { error: string }`
+- Use proper HTTP status codes (200, 201, 400, 401, 403, 404, 500)
+- Log errors with logger from src/lib/logger.ts, not console
+- For streaming: use ReadableStream with proper error handling
+- Never expose stack traces or internal errors in responses
+- Import Zod schemas from src/lib/validation.ts for reuse

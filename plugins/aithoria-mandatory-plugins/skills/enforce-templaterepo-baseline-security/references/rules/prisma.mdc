@@ -1,0 +1,18 @@
+---
+description: Prisma schema and database conventions
+globs: prisma/**
+alwaysApply: false
+---
+
+# Prisma Conventions
+
+- Models: PascalCase. Fields: camelCase
+- Every model must have: id (cuid), createdAt, updatedAt
+- Use @default(cuid()) for primary keys
+- Always use the singleton client from src/lib/db.ts (factory: src/lib/create-prisma-client.ts)
+- Client is generated to src/generated/prisma — run `npm run db:generate` after schema changes
+- CLI config: root prisma.config.ts (datasource URL, migrations, seed)
+- After schema changes: run `npm run db:migrate` to create a migration
+- Migration names: descriptive snake_case (e.g., add_user_email_index)
+- SSL enforced for all PostgreSQL connections
+- Use Prisma's `$transaction` for multi-step operations

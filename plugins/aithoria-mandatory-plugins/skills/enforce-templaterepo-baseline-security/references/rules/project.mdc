@@ -1,0 +1,72 @@
+---
+description: Core project conventions and tech stack
+alwaysApply: true
+---
+
+# Project: Template repo
+
+## Project identity
+- Root [`project.json`](project.json) is the only place org-specific values live (schema: `projectManifestSchema` in [`src/lib/validation.ts`](src/lib/validation.ts)): **`slug`** (3–16 lowercase alphanumeric; Terraform / Azure naming), optional **`displayName`** for the UI ([`src/lib/app-config.ts`](src/lib/app-config.ts)), **`templateRepo`** (`owner/name`; origin match = template mode), **`dns.zone`** / **`dns.repo`** (apps live at `<slug>.<env>.<zone>`; DNS PRs go to `dns.repo`), optional **`codeowners`** (pattern → owners). Never hard-code `aithoria-internal`, `aithoria.de` or `aithoria-dns` — read the manifest (`scripts/project-manifest.ts` in scripts, `jsondecode(file(...))` in Terraform).
+- Generated files — never edit by hand: `package.json` `name` and `.github/CODEOWNERS` come from `project.json`; `.env.example` comes from `ENV_DOCS` in [`src/lib/env.ts`](src/lib/env.ts) (typed against `serverEnvSchema`, so a new env var must be added there and documented in the same place). Run **`npm run project:sync`** after changing either source ([`scripts/project-sync.ts`](scripts/project-sync.ts)); **`npm run doctor`** and unit tests fail on drift.
+
+## Tech Stack
+- Next.js 16 (App Router, React Server Components)
+- TypeScript (strict mode)
+- Prisma ORM with PostgreSQL
+- NextAuth.js v5 with Microsoft Entra ID
+- Azure AI Foundry (gpt-5.4-mini via openai SDK)
+- Tailwind CSS + aithoria design system (CSS variables)
+- Azure Container Apps (deployment target)
+
+## Conventions
+- Use named exports, not default exports
+- Validate all inputs with Zod schemas
+- Use server components by default; add "use client" only when needed
+- Error handling: throw typed errors, never expose internal details to client
+- Environment variables: add to `serverEnvSchema` + `ENV_DOCS` in src/lib/env.ts, then `npm run project:sync` regenerates .env.example
+- Imports: use @/ path alias for src/ directory
+- No console.log -- use the structured logger from src/lib/logger.ts
+- All database access through Prisma client from src/lib/db.ts (generated at src/generated/prisma via Prisma 7 + @prisma/adapter-pg)
+- All AI calls through the client from src/lib/ai.ts
+
+## Key Files
+- src/lib/ai.ts -- AzureOpenAI client (Managed Identity)
+- src/lib/auth.ts -- NextAuth config with Entra ID
+- src/lib/db.ts -- Prisma client singleton
+- src/lib/logger.ts -- Structured logging (console-based, JSON in prod)
+- src/lib/validation.ts -- Shared Zod schemas (includes `projectManifestSchema`)
+- src/middleware.ts -- Auth + security headers
+
+## Authentication (NextAuth v5)
+- NextAuth v5 uses `AUTH_SECRET` (not `NEXTAUTH_SECRET`)
+- Set `AUTH_TRUST_HOST=true` in containerized environments
+- MicrosoftEntraID provider uses `issuer` URL, not `tenantId` property
+- Custom sign-in page at src/app/auth/signin/page.tsx (v5 has no built-in page)
+
+## Terraform layers
+- `bootstrap/` — Terraform state storage, GitHub OIDC deployment identity, RBAC, GitHub environments/variables. Run once via `npm run bootstrap:azure`; see [`bootstrap/README.md`](bootstrap/README.md)
+- `infra/` — application/platform stacks, one state key per environment
+- Azure identifiers in GitHub (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) are Actions **variables**, not secrets — CI/CD holds no Azure credential
+
+## Docker / Deployment
+- Dockerfile uses multi-stage build: deps -> builder -> runner
+- Alpine images require `apk add openssl` for Prisma
+- Production image includes generated client (`src/generated/prisma`), `@prisma/client`, `@prisma/adapter-pg`, and `pg` — but NOT the Prisma CLI
+- Database URL for CLI lives in root `prisma.config.ts` (not in `schema.prisma`)
+- Use prisma/push-schema.mjs (raw SQL via `pg`) for schema setup at container startup
+- Terraform sets **`APP_ENV`** on each Container App (`dev` / `staging` / `prod`) so the footer badge matches the stack (Next.js always runs `NODE_ENV=production` in containers)
+- ESLint config uses native flat config imports -- do NOT use FlatCompat with eslint-config-next
+- Lint scripts use `eslint .` directly (not `next lint`) due to Next.js 16 CLI bug
+- CI/CD: GitHub Actions in .github/workflows/ (ci.yml for build/test/deploy, cd.yml for promotion)
+- Use `npx --no-install prisma generate` in CI to avoid version mismatch
+
+## Build Version
+- Build version is injected as `BUILD_VERSION` env var during Docker build
+- Displayed in the site footer and at /api/health
+- Format: `v.YYYY-MM-DD.HH-MM` (e.g., v.2026-04-07.21-09)
+
+## AI Features
+- Contact generation: POST /api/contacts/generate with `{ "theme": "..." }`
+- Uses `response_format: { type: "json_object" }` for structured output
+- Use `max_completion_tokens` (not `max_tokens`) for gpt-5.4-mini
+- User-assigned managed identity requires `AZURE_CLIENT_ID` env var in Container App
