@@ -1,0 +1,11 @@
+{
+  "name": "aithoria-optin-plugins",
+  "displayName": "Aithoria Opt-in Plugins",
+  "version": "0.1.0",
+  "description": "Freiwillige Skills, Rules und Tools der aithoria-Organisation. Dieses Plugin bleibt leer, bis jemand etwas bewusst dazunimmt.",
+  "license": "MIT",
+  "keywords": ["aithoria", "opt-in", "optional", "plugins"],
+  "author": {
+    "name": "Aithoria"
+  }
+}

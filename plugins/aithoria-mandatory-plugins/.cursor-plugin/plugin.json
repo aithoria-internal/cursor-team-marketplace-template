@@ -1,0 +1,11 @@
+{
+  "name": "aithoria-mandatory-plugins",
+  "displayName": "Aithoria Mandatory Plugins",
+  "version": "1.0.0",
+  "description": "Skills, Rules und Tools, die für die aithoria-Organisation immer an sind.",
+  "license": "MIT",
+  "keywords": ["aithoria", "mandatory", "enforced", "plugins", "skills", "rules"],
+  "author": {
+    "name": "Aithoria"
+  }
+}

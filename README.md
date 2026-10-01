@@ -20,6 +20,14 @@ Covers UX definition and the handoff into code. The `wireframes` and `mockup` sk
 
 The single home for developer-facing prose workflows. Cursor Starter Pack still sets the baseline expectation to document important behavior, while this plugin handles README work, weekly review summaries, and longer-form documentation such as API references and guides. The `readme-hygiene` skill notices when changes should update a README, and the `docs-writer` agent handles substantial developer-facing prose. An optional Notion MCP is included for teams that publish there. Markdown file-naming conventions intentionally live in **Cursor Starter Pack** so naming stays universal rather than docs-specific.
 
+### Aithoria Mandatory Plugins
+
+Org-wide baseline that stays on for everyone. Import this marketplace and mark **Aithoria Mandatory Plugins** as **Required**. It currently carries the template-baseline rule and skill. New enforced skills and rules go here.
+
+### Aithoria Opt-in Plugins
+
+Voluntary bucket. Mark **Aithoria Opt-in Plugins** as **Optional** so each person turns it on themselves. The plugin is empty until someone adds a skill or rule that should stay opt-in.
+
 ### Testing
 
 Focused specifically on automated test workflows. Cursor Starter Pack still sets the baseline expectation that changed behavior should be tested, while this plugin owns the testing specialists: `write-unit-tests` and `write-e2e-tests` provide narrower authoring workflows, `browser-automation-tests` covers live UI verification with Cursor browser automation, `test-engineer` adds and extends unit and E2E tests that match the project's frameworks and conventions, and `test-runner` executes and interprets the relevant test commands. `mcp.json` is intentionally empty so each team can add CI or vendor MCP servers that fit their stack.
