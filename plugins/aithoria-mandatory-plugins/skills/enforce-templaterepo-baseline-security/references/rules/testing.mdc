@@ -1,0 +1,16 @@
+---
+description: Testing patterns and conventions
+globs: tests/**
+alwaysApply: false
+---
+
+# Testing Conventions
+
+- Unit tests: Vitest, files named *.test.ts
+- E2E tests: Playwright, files named *.spec.ts
+- Use describe/it blocks with clear, behavior-focused names
+- Mock Prisma client using tests/helpers/mock-db.ts
+- Mock auth sessions using tests/helpers/mock-auth.ts
+- Prefer testing behavior over implementation details
+- Target accessible selectors in E2E (role, label), not CSS classes
+- Run unit: `npm run test`, E2E: `npm run test:e2e`

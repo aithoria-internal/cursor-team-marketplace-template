@@ -1,0 +1,43 @@
+---
+description: Terraform module conventions
+globs: infra/**,bootstrap/**
+alwaysApply: false
+---
+
+# Terraform Conventions
+
+## Layers
+- `bootstrap/` -- pre-platform only: Terraform state storage, GitHub OIDC deployment identity (`azuread_application` + federated credentials, **never** `azuread_application_password`), its RBAC, and GitHub environments/variables. Flat layout (no submodules); state key `bootstrap.tfstate`.
+- `infra/` -- everything the application needs at runtime. Never add application resources to `bootstrap/`, and never add deployment identity or state resources to `infra/`.
+- Both backends use `use_azuread_auth = true`; the state account has `shared_access_key_enabled = false`.
+
+## Structure
+- Each module has: main.tf, variables.tf, outputs.tf
+- Resource naming: `{type}-{project_name}-{environment}` (e.g., `rg-<slug>-dev`; slug comes from root `project.json` unless overridden)
+- Always use variables, never hardcode values
+- Tag all resources with: environment, project, managed_by="terraform"
+- Use locals for computed values and resource suffix
+- Pass dependencies between modules via outputs/variables, not data sources
+- State stored in Azure Storage Account, separate key per environment
+- Apply with: `terraform apply -var-file=environments/{env}.tfvars`
+
+## Globally Unique Names
+Azure requires globally unique names for: PostgreSQL servers, Key Vaults, Container Registries, Cognitive Accounts. Always append a `random_string` suffix to these resources.
+
+## PowerShell Compatibility
+Never pass `-var` arguments on the command line in PowerShell -- it mangles the parsing. Use `$env:TF_VAR_<name>` environment variables instead.
+
+## Deployment Pitfalls
+- Register `Microsoft.App` provider before creating Container Apps: `az provider register --namespace Microsoft.App --wait`
+- PostgreSQL: omit `zone` parameter and add `lifecycle { ignore_changes = [zone] }` -- zone availability varies by subscription
+- AI Foundry: use a separate `ai_location` variable (e.g. `swedencentral`) since OpenAI models are region-restricted
+- Container App Environment: add `lifecycle { ignore_changes = [infrastructure_resource_group_name] }` to avoid unnecessary replacements
+- Provider features: set `prevent_deletion_if_contains_resources = false` so resource groups can be destroyed cleanly
+- If `terraform apply` fails partway, existing resources may need importing: `terraform import <address> <id>`
+- Never use `terraform state rm` unless you plan to delete and recreate the resource
+
+## Azure Authentication
+Three separate mechanisms, never mixed: developers use `az login` + `DefaultAzureCredential`; GitHub Actions uses Workload Identity Federation against the `bootstrap/` deploy identity; Azure workloads use the user-assigned managed identity from `infra/modules/identity`. The application must never use the deployment identity, and federated credential subjects must stay exact (no wildcard branch or repo).
+
+## Database Auth
+The app runtime authenticates to PostgreSQL with its user-assigned managed identity (Entra token auth): the identity is the server's AD admin (`managed-identity-admin`), `DATABASE_URL` on the Container App is passwordless, and the app/entrypoint exchange the identity for an access token at connection time (`src/lib/db-auth.ts`, `prisma/push-schema.mjs`). The server has `password_auth_enabled = false` and **no** `administrator_login` / `administrator_password` — there is no database password anywhere, and no connection string in Key Vault. Because that leaves no local admin role, `azurerm_postgresql_flexible_server_database.app` must keep its `depends_on` the AD administrator, or `appdb` can end up owned by `azuresu` and the identity cannot create the schema. Local dev keeps password auth via `.env` against the compose Postgres.

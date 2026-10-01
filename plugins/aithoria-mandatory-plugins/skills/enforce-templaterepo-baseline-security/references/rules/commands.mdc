@@ -1,0 +1,28 @@
+---
+description: How to run development commands cross-platform
+alwaysApply: true
+---
+
+# Commands
+
+Always use npm scripts. Never use raw shell commands that may not work cross-platform.
+
+- Dev server: `npm run dev`
+- Full stack (app + DB): `docker compose up`
+- Lint: `npm run lint`
+- Format: `npm run format`
+- Type check: `npm run type-check`
+- Unit tests: `npm run test`
+- E2E tests: `npm run test:e2e`
+- DB migrate: `npm run db:migrate`
+- DB studio: `npm run db:studio`
+- DB seed: `npm run db:seed`
+- Prerequisite check: `npm run doctor`
+- Regenerate `package.json` name + `.github/CODEOWNERS` (from `project.json`) and `.env.example` (from `src/lib/env.ts`): `npm run project:sync`
+- Azure bootstrap (Terraform bootstrap layer + platform stacks): `npm run bootstrap:azure`
+- Azure bootstrap with optional staging tier: `npm run bootstrap:azure -- --enable-staging`
+- Open DNS PR (aithoria-dns, reads terraform outputs): `npm run dns:pr:dev` / `dns:pr:staging` / `dns:pr:prod`
+- Preview DNS HCL only: append `:dry-run` (e.g. `npm run dns:pr:staging:dry-run`)
+- Open DNS deletion PR (aithoria-dns): `npm run dns:delete-pr:dev` / `dns:delete-pr:staging` / `dns:delete-pr:prod`
+- Preview DNS deletion only: append `:dry-run` (e.g. `npm run dns:delete-pr:staging:dry-run`)
+- Build: `npm run build`

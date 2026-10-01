@@ -1,0 +1,23 @@
+# Secrets and local env (keep .env.example indexable for AI help)
+.env
+.env.*
+!.env.example
+
+# Crypto / keys
+*.pem
+*.key
+
+# Terraform state and plans (secrets possible in outputs)
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfplan
+
+# Large / generated -- reduce noise and accidental context bloat
+node_modules/
+.next/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+src/generated/

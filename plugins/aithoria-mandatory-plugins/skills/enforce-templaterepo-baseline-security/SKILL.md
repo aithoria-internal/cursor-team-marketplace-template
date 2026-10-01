@@ -1,121 +1,84 @@
 ---
-name: template-baseline
+name: enforce-templaterepo-baseline-security
 description: >-
-  Checks the current git repository against the secret and ignore baseline from
-  aithoria-internal/templaterepo. Creates missing .gitignore, .cursorignore and
-  .dockerignore files, proposes additions to existing ones for confirmation,
-  and offers an optional comparison of Cursor rules. Never changes a customer
-  project on its own. Use once per day in a repository, and again the same day
-  when a stack path appears that was absent at the last check, such as infra/,
-  bootstrap/, prisma/, or tests/.
+  Keeps the governance baseline of aithoria-internal/templaterepo in the
+  current git repository: the ignore files .gitignore, .cursorignore and
+  .dockerignore (read live from GitHub), and template Cursor rules when they
+  add value. Creates missing ignore files in own projects, proposes additions
+  to existing ones, and writes a rule only after an explicit yes. Never changes
+  a customer project on its own. Use once per day per repository, and again
+  when a stack path such as infra/, bootstrap/, prisma/ or tests/ appears.
 metadata:
-  version: "1"
+  version: "3"
 ---
 
 # Template baseline
 
-The template repository is the source of the minimum secret boundary. Projects that were not created from it, and projects that bypass it, can still receive that boundary. Read the files live from GitHub. Do not rely on a copy stored in this skill.
-
-Source: `aithoria-internal/templaterepo`, default branch, via `gh`.
-
-This does not adopt the template. Application code, workflows, Terraform, Docker, package files, Prisma, `.env.example`, Cursor rules, and skills stay as they are unless the user explicitly chooses otherwise.
+The template repository `aithoria-internal/templaterepo` defines the minimum governance baseline: which files stay out of git, out of the AI context, and out of Docker images. This skill brings that baseline into a repository. It does not adopt the template. Code, workflows, Terraform, Docker, and package files stay as they are.
 
 ## When
 
-Once per calendar day for a repository, and again the same day when a stack path appears that was absent at the last check. Skip the template repository itself. Skip a directory that is not a git repository. If `gh` cannot read the template, stop and say so. Do not invent file contents.
+- Once per calendar day per repository.
+- Again the same day when a stack path appears that was absent at the last check: `infra/`, `bootstrap/`, `prisma/`, `tests/`, `src/app/api/`, `src/components/`, or a `project.json` that contains `templateRepo`. Also run before you create one of these paths yourself.
+- Skip the template repository itself and any directory that is not a git repository.
 
-Stack paths that trigger a new check: `infra/`, `bootstrap/`, `prisma/`, `tests/`, `src/app/api/`, `src/components/`, and a `project.json` that contains `templateRepo`.
+Keep a note outside the repository, in the user agent store, as `template-baseline-stamps/<owner>--<repo>.txt`. If there is no store, keep it for the conversation. The note holds the date, the stack paths that exist, the project level, and the user's decisions. Never write it into the project.
 
-Record the check outside the repository, in the user agent store, as `template-baseline-stamps/<owner>--<repo>.txt`. Write today's date, which of those paths existed, the project level (see below), and the user's decisions (for example "ignore additions declined", "rule comparison declined"). If no agent store is available, remember the same note for the conversation. Run when there is no note, the date is not today, or a path exists now that the note does not list. After a run, update the note. Do not put the note in the project and do not commit it.
+Something the user declined stays declined. Do not ask again, do not ask why, and do not bring it up on a later day.
 
-Do not ask again on the same day about something the user already declined, unless a new stack path appeared or the template now proposes different lines.
+## 1. Project level
 
-Before creating one of those stack paths, run the check again even if today already ran. Then update the note.
+Decide this first. It controls everything below.
 
-Do not commit the baseline. If the user asks to commit, follow `use-git-momentum` when that repository adopts it.
+Read the template with `gh`:
 
-## Project level
+```
+gh api repos/aithoria-internal/templaterepo/contents/<file> -H "Accept: application/vnd.github.raw"
+```
 
-Decide the level before touching anything. It controls every step below.
+**Customer project** applies if either is true:
 
-1. **Customer project.** The `origin` remote belongs to an owner other than `aithoria` or `aithoria-internal`, or the user has said it is a customer or third-party project. Change nothing and create nothing. Mention in one sentence that a comparison against the template baseline is available on request. Only if the user asks, show the comparisons described below as a read-only report. Apply nothing unless the user then names exactly what to apply.
-2. **Own project, ignore file missing.** Create the missing file from the template and tell the user which files were created.
-3. **Own project, ignore file present.** Show the comparison list and wait for confirmation before writing.
+- The template cannot be read: no access, `gh` is not logged in, or it returns 404.
+- The owner of the `origin` remote is not `aithoria`, `aithoria-internal`, or the user's own account (`gh api user --jq .login`). The same applies if the user says it is a customer or third-party project.
 
-Levels 2 and 3 apply per file: a repository can have `.gitignore` but no `.dockerignore`.
+This is not an error. Be strictly defensive here: create nothing and change nothing on your own, not even a missing ignore file. Open with one short note: this is not an aithoria-internal or private project, so you will not change anything without explicit agreement. If the template is readable, offer the comparison (see 2) in the same note. Show it only as a read-only report. Write only the lines the user then names explicitly.
 
-If ownership is unclear (no remote, a fork, a personal account), ask the user once whether it is a customer project and treat it as level 1 until they answer.
+**Own project** means the template is readable and the owner is `aithoria`, `aithoria-internal`, or the user's own account. Decide each ignore file separately:
 
-## Ignore files
+- **File missing:** create it without asking, with the current content from the template. Then name the created files in one sentence.
+- **File present:** always offer the comparison with the template (see 2). Write only after the user confirms.
 
-Read these paths from the template:
+If there is no remote, ask once whether this is a customer project. Treat it as one until the user answers.
 
-- `.gitignore`
-- `.cursorignore`
-- `.dockerignore`
+## 2. Ignore files
 
-The template has no `.terraformignore` and no `.cursorrules`. Terraform state, plans, and `.terraform/` are patterns inside `.gitignore` and `.cursorignore`. Do not create a file the template does not have.
+The files are `.gitignore`, `.cursorignore`, and `.dockerignore`. Always read them live from the template's default branch, because they are the secret boundary and must be current. Do not use a copy, and do not create a file the template does not have.
 
-### Missing file (level 2)
+To compare an existing file, match trimmed pattern lines and ignore blank lines and comments. Show a short list per file:
 
-Create it with the template contents. Afterwards, list the created files in one sentence.
+- **Present:** template patterns the file already has.
+- **Would be added:** template patterns it lacks.
+- **Notes:** added lines starting with `!`, because a negation at the end can re-include paths the project ignores on purpose. Also list any tracked file a new pattern would match. Check that with `git ls-files -ci --exclude-from=<tmp>`.
 
-### Existing file (level 3)
+Then ask: add all, add some, or add none. If everything is already present, say so in one sentence and do not ask.
 
-Compare by trimmed pattern lines; ignore blank lines and comments. Present, per file:
+When the user confirms, append only the confirmed lines to the end of the project's ignore file. Put this comment line directly above them, so it is clear where they came from: `# template baseline (aithoria-internal/templaterepo)`. Never write to the template repository. Never change, reorder, or remove project lines. A tracked file that becomes ignored stays tracked. Report it, especially `.env*`, `*.pem`, and `*.tfstate`, but do not remove it from the index.
 
-- **Already present:** template patterns the file already contains.
-- **Would be added:** template patterns the file lacks.
-- **Notes:** any added line that starts with `!` (a negation appended at the end can re-include paths the project ignores on purpose), and any already tracked file the new patterns would match.
+## 3. Template rules
 
-Lines that exist only in the project are not listed and are never touched.
+Do not include this in the daily pass. Use it only when a stack path is new, or when the user asks about rules.
 
-Keep the list compact; a short table or grouped list per file is enough. Then ask whether to apply all additions, a selection, or none. Do not write before the user answers.
+Source: [references/template-rules.md](references/template-rules.md). This is a local copy of the template rules as of 2026-10-01. Do not read rules from GitHub.
 
-On confirmation, append only the confirmed lines at the end under one comment: `# template baseline (aithoria-internal/templaterepo)`. Leave every existing line, including order and comments, untouched. Omit the block when nothing is confirmed. If every template pattern is already present, say so and skip the question.
+Offer a rule only if it passes both tests:
 
-### Tracked files
+1. **It helps this repository:** its "Fits when" condition is true here.
+2. **The project does not already cover it:** compare the rule's behavior and target with what the project already has, regardless of file names. Look in `.cursor/rules/`, `.cursorrules`, `AGENTS.md`, `CLAUDE.md`, and `.cursor/skills/`, `.claude/skills/`, `.agents/skills/`, `.codex/skills/`. A rule with a different name but the same scope and target counts as coverage. For example, an existing `react-conventions.mdc` on `src/components/**` covers `components.mdc`. A matching file name is only a hint.
 
-A newly ignored file that is already tracked stays tracked. Report it, including `.env`, `*.pem`, and `*.tfstate`. Do not remove it from the index.
+If no rule passes, say nothing about rules. If some pass, name each one with one sentence on why it helps. Do not list what is already covered.
 
-## Rules
-
-Never add, replace, merge into, or delete a Cursor rule on your own. Projects may have their own conventions. Leave a legacy `.cursorrules` file untouched.
-
-Ask the user once whether they want a comparison of the project's rules with the template rules in `.cursor/rules`. Skip the question in a customer project unless the user brings it up. If the user declines, record that and move on.
-
-If the user wants the comparison, list:
-
-- **Template only:** rules the project does not have, with whether they fit this repository (see table).
-- **Same name, different content:** a short summary of the differences, not a full diff unless asked.
-- **Project only:** rules the template does not have, for context.
-
-| Template rule | Fits this repository when |
-| --- | --- |
-| `behavior.mdc` | always; it does not name a stack |
-| `project.mdc` | `project.json` contains `templateRepo` |
-| `commands.mdc` | `project.json` contains `templateRepo` |
-| `api-routes.mdc` | `src/app/api/` exists |
-| `components.mdc` | `src/components/` exists |
-| `prisma.mdc` | `prisma/` exists |
-| `terraform.mdc` | `infra/` or `bootstrap/` exists |
-| `testing.mdc` | `tests/` exists |
-
-A rule the template adds later follows the same test: `alwaysApply` and no stack names fits every repository; otherwise the paths in its `globs` must already exist.
-
-The user decides what to take over. Apply only the rules they name, as new files. Change an existing rule file only when the user explicitly asks for that specific change.
-
-## Skills
-
-List `.agents/skills`, `.claude/skills`, and `.codex/skills` in the template. The template currently has none. If it gains one, treat it like a rule: mention it, and copy it only when the user asks and the project does not already have the same skill name in any of those three directories or in `.cursor/skills`. Write it once, into the same directory the template used. Do not overwrite an existing skill.
+Write a rule only after an explicit yes for that specific rule. Agreeing to hear suggestions is not agreement to write a file. Copy the rule from `references/rules/<name>.mdc` to `.cursor/rules/<name>.mdc`. Never overwrite, merge into, or delete an existing rule. In a customer project, bring up rules only if the user asks.
 
 ## After
 
-Say in one or two sentences what changed: created files, confirmed additions, and adopted rules. If nothing changed because the baseline was already present or the user declined, say that briefly and continue the task the user asked for.
-
-## Changelog
-
-History only; the sections above define the behavior.
-
-- **v1** (feedback: Denis). Added project levels: customer projects are not changed, and a comparison runs only on request. Missing ignore files are created and reported. Additions to existing ignore files are shown as a comparison list and applied only after confirmation. Cursor rules and template skills are no longer added automatically; the user is offered a comparison and decides. Declined decisions are stored in the stamp. Reason: template rules can conflict with a project's own conventions, and customer repositories must not change without consent.
-- **v0**. Initial version. Created missing ignore files and appended missing patterns without asking. Added template Cursor rules and skills automatically when the filename was absent and the stack path existed.
+Say in one or two sentences what changed: which files were created, which lines were added, and which rules were adopted. If nothing changed, say so briefly. Then continue with the user's actual task.
