@@ -35,6 +35,11 @@
       "name": "testing",
       "source": "testing",
       "description": "Test authoring and execution: unit, E2E, and browser automation skills plus test engineer and test runner agents"
+    },
+    {
+      "name": "aithoria-internal-plugins",
+      "source": "aithoria-internal-plugins",
+      "description": "Die Sammlung allgemeiner Skills, MCP, Commands, Rules, Tools die von der aithoria organisation global bereitgestellt werden."
     }
   ]
 }
