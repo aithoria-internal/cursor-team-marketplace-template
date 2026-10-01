@@ -1,0 +1,12 @@
+---
+description: Once per day, add the template secret baseline without rewriting existing project files, and again the same day when a stack path such as infra/ appears. Read and follow the personal skill template-baseline.
+alwaysApply: true
+---
+
+Once per day in a git repository, read and follow the personal skill `template-baseline`. The same day, follow it again when a path appears that was absent at the last check, including `infra/`, `bootstrap/`, `prisma/`, `tests/`, `src/app/api/`, and `src/components/`. Copy a template rule only when that path exists. Terraform rules wait until `infra/` or `bootstrap/` exists.
+
+Read `.gitignore`, `.cursorignore`, and `.dockerignore` live from `aithoria-internal/templaterepo`. Create a missing file. In an existing file, append only patterns that are not already there. Do not rewrite, delete, or reorder existing lines.
+
+Add a template rule under `.cursor/rules` only when that file is missing and the rule fits this repository. Never replace an existing rule. Add a template skill only when that skill name is missing.
+
+Do not copy application code, CI, Terraform, Docker, package files, or `.env.example`. Do not untrack a file that is already committed. Do not apply this inside the template repository. Do not commit unless the user asks.

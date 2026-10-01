@@ -1,0 +1,11 @@
+{
+  "name": "aithoria-internal-plugins",
+  "displayName": "aithoria internal plugins",
+  "version": "1.0.0",
+  "description": "Die Sammlung allgemeiner Skills, MCP, Commands, Rules, Tools die von der aithoria organisation global bereitgestellt werden.",
+  "license": "MIT",
+  "keywords": ["aithoria", "internal", "plugins", "skills", "mcp", "commands", "rules", "tools"],
+  "author": {
+    "name": "Aithoria"
+  }
+}
